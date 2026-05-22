@@ -247,7 +247,7 @@ async function run() {
       }
     });
 
-    //staff asign - update issue
+    //staff asign - issue er modhe noton staff asign korlam
     app.patch("/assignStaff/:id", async (req, res) => {
       const id = req.params.id;
       const assignedStaffUpdate = req.body;
@@ -279,6 +279,27 @@ async function run() {
       const update = {
         $set: updateStatus,
       };
+      const result = await usersCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    //get single Staff
+    app.get("/getSingleStuff/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const staff = await usersCollection.findOne(query);
+      if (!staff) {
+        return res.status(404).send({ message: "Staff not found" });
+      }
+      res.send(staff);
+    });
+
+    //update staff
+    app.patch("/updateStaff/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedStaff = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = { $set: updatedStaff };
       const result = await usersCollection.updateOne(query, update);
       res.send(result);
     });
