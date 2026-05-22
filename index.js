@@ -134,8 +134,10 @@ async function run() {
     app.post("/user", async (req, res) => {
       const newUser = req.body;
       newUser.role = "citizen";
+      newUser.status = "active";
       newUser.createdAt = new Date();
       const email = newUser.email;
+
       const userExist = await usersCollection.findOne({ email });
       if (userExist) {
         return res.send({ message: "User already exists" });
@@ -153,6 +155,13 @@ async function run() {
       if (!result) {
         return res.status(404).json({ message: "User not found" });
       }
+      res.send(result);
+    });
+
+    // get all user/citizen
+    app.get("/getAllUser", async (req, res) => {
+      const users = usersCollection.find({ role: "citizen" });
+      const result = await users.toArray();
       res.send(result);
     });
 
@@ -259,6 +268,18 @@ async function run() {
         $set: statusUpdate,
       };
       const result = await issuesCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    // user block/unblock
+    app.patch("/blockUnblock/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateStatus = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: updateStatus,
+      };
+      const result = await usersCollection.updateOne(query, update);
       res.send(result);
     });
 
