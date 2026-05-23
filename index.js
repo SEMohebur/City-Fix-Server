@@ -271,6 +271,18 @@ async function run() {
       res.send(result);
     });
 
+    // update issue progress status
+    app.patch("/updateProgress/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateProgress = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: updateProgress,
+      };
+      const result = await issuesCollection.updateOne(query, update);
+      res.send(result);
+    });
+
     // user block/unblock
     app.patch("/blockUnblock/:id", async (req, res) => {
       const id = req.params.id;
