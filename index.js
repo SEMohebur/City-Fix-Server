@@ -4,6 +4,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 require("dotenv").config();
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
+
 //Admin Sdk Setup
 const admin = require("firebase-admin");
 
@@ -314,6 +316,64 @@ async function run() {
       const update = { $set: updatedStaff };
       const result = await usersCollection.updateOne(query, update);
       res.send(result);
+    });
+
+    //premium user payment api
+    app.post("/create-checkout-session", async (req, res) => {
+      const paymentInfo = req.body;
+
+      const BDT_TO_USD = 120;
+      const amount = Math.round(
+        (parseInt(paymentInfo.cost) / BDT_TO_USD) * 100,
+      );
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: "Payment",
+                description: `Payment from ${paymentInfo.senderName}`,
+              },
+              unit_amount: amount,
+            },
+            quantity: 1,
+          },
+        ],
+
+        customer_email: paymentInfo.senderEmail,
+        mode: "payment",
+
+        success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_DOMAIN}/payment-cancel`,
+      });
+
+      res.send({ url: session.url });
+    });
+
+    //premium payment success
+    app.patch("/premium-payment-success", async (req, res) => {
+      const session_id = req.query.session_id;
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+      const email = session.customer_email;
+      if (session.payment_status === "paid") {
+        const filter = {
+          email: email,
+        };
+        const update = {
+          $set: {
+            payment_status: "paid",
+            role: "premium",
+            premiumAt: new Date(),
+          },
+        };
+        const result = await usersCollection.updateOne(filter, update);
+        res.send(result);
+      }
+      res.send({ success: false });
     });
 
     await client.db("admin").command({ ping: 1 });
